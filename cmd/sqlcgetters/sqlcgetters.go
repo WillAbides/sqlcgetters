@@ -21,9 +21,7 @@ func main() {
 		"PathHelp":    `Path to sqlc output directory.`,
 		"OutHelp":     `Output file. Default: stdout.`,
 	}
-	if vars["version"] == "" {
-		vars["version"] = "dev"
-	}
+
 	var cli cliRoot
 	kctx := kong.Parse(&cli, vars, kong.Description(description))
 	kctx.FatalIfErrorf(kctx.Run())
