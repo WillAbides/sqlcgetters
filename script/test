@@ -5,3 +5,7 @@ set -e
 CDPATH="" cd -- "$(dirname -- "$(dirname -- "$0")")"
 
 go test -race -covermode=atomic ./...
+
+# testdata is its own module. Make sure it can build to guard against generating invalid code.
+cd testdata
+go build ./...
