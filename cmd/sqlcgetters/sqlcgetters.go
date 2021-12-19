@@ -1,11 +1,8 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
-	"io"
 	"os"
-	"path/filepath"
 
 	"github.com/alecthomas/kong"
 	"github.com/willabides/sqlcgetters"
@@ -31,7 +28,6 @@ func main() {
 }
 
 type cliRoot struct {
-	Out     string           `kong:"short=o,help=${OutHelp}"`
 	Version kong.VersionFlag `kong:"help=${VersionHelp}"`
 	Path    string           `kong:"arg,required,type=existingdir,help=${PathHelp}"`
 }
@@ -45,23 +41,6 @@ func (c *cliRoot) Run(kctx *kong.Context) (err error) {
 	if len(sources) == 0 {
 		return fmt.Errorf("no sqlc output found in %s", c.Path)
 	}
-
-	var buf bytes.Buffer
-	_, err = sqlcgetters.GenerateGetters(&buf, fsys, sources...)
-	if err != nil {
-		return err
-	}
-
-	// default to stdout
-	if c.Out == "" {
-		_, err = io.Copy(kctx.Stdout, &buf)
-		return err
-	}
-
-	// write file with permissions from parent dir minus executable bit
-	dirInfo, err := os.Stat(filepath.Dir(c.Out))
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(c.Out, buf.Bytes(), dirInfo.Mode()&^0o111)
+	_, err = sqlcgetters.GenerateGetters(kctx.Stdout, fsys, sources...)
+	return err
 }

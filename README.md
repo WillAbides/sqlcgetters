@@ -15,9 +15,8 @@ Arguments:
   <path>    Path to sqlc output directory.
 
 Flags:
-  -h, --help          Show context-sensitive help.
-  -o, --out=STRING    Output file. Default: stdout.
-      --version       Output the version and exit.
+  -h, --help       Show context-sensitive help.
+      --version    Output the version and exit.
 ```
 <!--- end usage output --->
 
