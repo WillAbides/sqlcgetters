@@ -20,6 +20,12 @@ Flags:
 ```
 <!--- end usage output --->
 
+Outputs to stdout. Example usage:
+
+```shell
+sqlcgetters ./sqlqueries >  ./sqlqueries/getters.go
+```
+
 ## Why do I need this?
 
 `sqlc` generates structs with exported fields, so why would you want getters? It's all about interfaces. Take these 
@@ -61,3 +67,19 @@ type BooksByTagsRow struct {
 You have two different structs with the same fields. Writing a function that handles either of them is difficult. 
 You need to accept `interface{}` and the type switch to handle the different structs. But if you had a Get*() 
 function for each field, your function can accept an interface with the fields you need.
+
+## Install
+
+### go get
+
+`go get -u github.com/willabides/sqlcgetters/cmd/sqlcgetters`
+
+### bindown
+
+Add a [bindown](https://github.com/willabides/bindown) dependency:
+
+```
+$ bindown template-source add sqlcgetters https://raw.githubusercontent.com/WillAbides/sqlcgetters/main/bindown.yml
+$ bindown dependency add sqlcgetters sqlcgetters#sqlcgetters
+Please enter a value for required variable "version":	<latest version>
+```

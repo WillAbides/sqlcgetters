@@ -143,6 +143,16 @@ templates:
     - darwin/arm64
     - linux/amd64
     - windows/amd64
+  sqlcgetters:
+    url: https://github.com/WillAbides/sqlcgetters/releases/download/v{{.version}}/sqlcgetters_{{.version}}_{{.os}}_{{.arch}}.tar.gz
+    required_vars:
+    - version
+    systems:
+    - darwin/amd64
+    - darwin/arm64
+    - linux/386
+    - linux/amd64
+    - linux/arm64
 template_sources:
   origin: https://raw.githubusercontent.com/WillAbides/bindown-templates/master/bindown.yml
 url_checksums:
