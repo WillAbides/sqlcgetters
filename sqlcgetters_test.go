@@ -3,7 +3,6 @@ package sqlcgetters
 import (
 	"bytes"
 	"flag"
-	"fmt"
 	"io/fs"
 	"os"
 	"path"
@@ -17,13 +16,6 @@ import (
 
 //go:generate go test . -write-golden
 
-func TestFoo(t *testing.T) {
-	stat, err := os.Stat("testdata")
-	require.NoError(t, err)
-
-	fmt.Println(stat.Mode().Perm() &^ 0o111)
-}
-
 var writeGolden bool
 
 func TestMain(m *testing.M) {
@@ -33,75 +25,48 @@ func TestMain(m *testing.M) {
 }
 
 func TestGenerateGetters(t *testing.T) {
-	testdata := os.DirFS(".")
+	fsys := os.DirFS(".")
 
 	t.Run("nogofiles", func(t *testing.T) {
 		var buf bytes.Buffer
-		_, err := GenerateGetters(&buf, testdata, "testdata/nogofiles/*.go")
-		require.EqualError(t, err, "no source files found")
+		_, err := GenerateGetters(&buf, fsys)
+		require.EqualError(t, err, "no sources provided")
 		require.Equal(t, "", buf.String())
 	})
 
 	t.Run("nongofile", func(t *testing.T) {
 		var buf bytes.Buffer
-		_, err := GenerateGetters(&buf, testdata, "testdata/nongofile/*")
+		_, err := GenerateGetters(&buf, fsys, "testdata/nongofile/foo.go", "testdata/nongofile/nongofile.txt")
 		require.Error(t, err)
 		require.True(t, strings.Contains(err.Error(), "could not parse go source"))
 	})
 
 	t.Run("alpha", func(t *testing.T) {
-		goldenTest(t, testdata, "testdata/alpha")
+		goldenTest(t, fsys, "testdata/alpha")
 	})
 
 	t.Run("nostructs", func(t *testing.T) {
-		goldenTest(t, testdata, "testdata/nostructs")
+		goldenTest(t, fsys, "testdata/nostructs")
 	})
 
 	t.Run("testpkg", func(t *testing.T) {
 		var buf bytes.Buffer
-		_, err := GenerateGetters(&buf, testdata, "testdata/testpkg/*.go")
+		_, err := GenerateGetters(&buf, fsys, "testdata/testpkg/testpkg.go", "testdata/testpkg/testpkg_test.go")
 		require.EqualError(t, err, "could not parse go source: package name mismatch: testpkg != testpkg_test")
 	})
 
-	t.Run("alpha whole directory", func(t *testing.T) {
-		var buf bytes.Buffer
-		_, err := GenerateGetters(&buf, testdata, "testdata/alpha/*")
-		require.NoError(t, err)
-		want, err := os.ReadFile("testdata/alpha/getters.go")
-		require.NoError(t, err)
-		require.Equal(t, string(want), buf.String())
-	})
-
-	t.Run("alpha multi source", func(t *testing.T) {
-		var buf bytes.Buffer
-		_, err := GenerateGetters(&buf, testdata, "testdata/alpha/ex1.go", "testdata/alpha/ex2.go")
-		require.NoError(t, err)
-		want, err := os.ReadFile("testdata/alpha/getters.go")
-		require.NoError(t, err)
-		require.Equal(t, string(want), buf.String())
-	})
-
-	t.Run("alpha directory path", func(t *testing.T) {
-		var buf bytes.Buffer
-		_, err := GenerateGetters(&buf, testdata, "testdata/alpha")
-		require.NoError(t, err)
-		want, err := os.ReadFile("testdata/alpha/getters.go")
-		require.NoError(t, err)
-		require.Equal(t, string(want), buf.String())
-	})
-
 	t.Run("nostructs", func(t *testing.T) {
-		goldenTest(t, testdata, "testdata/nostructs")
+		goldenTest(t, fsys, "testdata/nostructs")
 	})
 
 	t.Run("sqlc", func(t *testing.T) {
 		tdMap := map[string]bool{}
-		err := fs.WalkDir(testdata, "testdata/sqlc", func(p string, info fs.DirEntry, err error) error {
+		err := fs.WalkDir(fsys, "testdata/sqlc", func(p string, info fs.DirEntry, err error) error {
 			if err != nil {
 				return err
 			}
 			if path.Ext(info.Name()) == ".go" {
-				tdMap[filepath.Dir(p)] = true
+				tdMap[path.Dir(p)] = true
 			}
 			return nil
 		})
@@ -113,7 +78,7 @@ func TestGenerateGetters(t *testing.T) {
 		sort.Strings(testDirs)
 		for _, testDir := range testDirs {
 			t.Run(testDir, func(t *testing.T) {
-				goldenTest(t, testdata, testDir)
+				goldenTest(t, fsys, testDir)
 			})
 		}
 	})
@@ -121,8 +86,10 @@ func TestGenerateGetters(t *testing.T) {
 
 func goldenTest(t *testing.T, fsys fs.FS, dir string) {
 	t.Helper()
+	sources, err := fs.Glob(fsys, path.Join(dir, "*.go"))
+	require.NoError(t, err)
 	var buf bytes.Buffer
-	_, err := GenerateGetters(&buf, fsys, path.Join(dir, "*.go"))
+	_, err = GenerateGetters(&buf, fsys, sources...)
 	require.NoError(t, err)
 	gettersGo := path.Join(dir, "getters.go")
 	if writeGolden {

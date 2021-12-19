@@ -25,14 +25,10 @@ var templates embed.FS
 
 // GenerateGetters generates getters for the files in sources.
 func GenerateGetters(w io.Writer, fsys fs.FS, sources ...string) (int64, error) {
-	sourceFiles, err := getSourceFiles(fsys, sources)
-	if err != nil {
-		return 0, err
+	if len(sources) == 0 {
+		return 0, fmt.Errorf("no sources provided")
 	}
-	if len(sourceFiles) == 0 {
-		return 0, fmt.Errorf("no source files found")
-	}
-	data, err := buildTemplateData(fsys, sourceFiles)
+	data, err := buildTemplateData(fsys, sources)
 	if err != nil {
 		return 0, fmt.Errorf("could not parse go source: %v", err)
 	}
@@ -60,7 +56,11 @@ func buildTemplateData(fsys fs.FS, sourceFiles []string) (*tmplData, error) {
 	var td tmplData
 	fset := token.NewFileSet()
 	for _, sourceFile := range sourceFiles {
-		file, err := fsParseFile(fset, fsys, sourceFile, nil, 0)
+		b, err := fs.ReadFile(fsys, sourceFile)
+		if err != nil {
+			return nil, err
+		}
+		file, err := parser.ParseFile(fset, sourceFile, b, 0)
 		if err != nil {
 			return nil, err
 		}
@@ -83,27 +83,6 @@ func buildTemplateData(fsys fs.FS, sourceFiles []string) (*tmplData, error) {
 		}
 	}
 	return &td, nil
-}
-
-func getSourceFiles(fsys fs.FS, sources []string) ([]string, error) {
-	for i := range sources {
-		info, err := fs.Stat(fsys, sources[i])
-		if err != nil {
-			continue
-		}
-		if info.IsDir() {
-			sources[i] = fmt.Sprintf("%s/*.go", sources[i])
-		}
-	}
-	sourceFiles := make([]string, 0, len(sources))
-	for _, source := range sources {
-		ff, err := fs.Glob(fsys, source)
-		if err != nil {
-			return nil, err
-		}
-		sourceFiles = append(sourceFiles, ff...)
-	}
-	return sourceFiles, nil
 }
 
 func setGetters(td *tmplData, fset *token.FileSet, decl ast.Decl) error {
@@ -190,13 +169,4 @@ func (td *tmplData) Getters() []getter {
 		takenNames[getterKey(getters[i].Receiver, getters[i].MethodName)] = true
 	}
 	return getters
-}
-
-// fsParseFile is like parser.ParseFile but it uses fs.FS
-func fsParseFile(fset *token.FileSet, fsys fs.FS, filename string, src interface{}, mode parser.Mode) (*ast.File, error) {
-	f, err := fs.ReadFile(fsys, filename)
-	if err != nil {
-		return nil, err
-	}
-	return parser.ParseFile(fset, filename, f, mode)
 }

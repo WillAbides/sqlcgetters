@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -18,7 +19,7 @@ func main() {
 	vars := kong.Vars{
 		"version":     version,
 		"VersionHelp": `Output the version and exit.`,
-		"PathHelp":    `Path to sqlc output file. Can be glob. Default: "*.go".`,
+		"PathHelp":    `Path to sqlc output directory.`,
 		"OutHelp":     `Output file. Default: stdout.`,
 	}
 	if vars["version"] == "" {
@@ -32,16 +33,21 @@ func main() {
 type cliRoot struct {
 	Out     string           `kong:"short=o,help=${OutHelp}"`
 	Version kong.VersionFlag `kong:"help=${VersionHelp}"`
-	Path    []string         `kong:"arg,help=${PathHelp}"`
+	Path    string           `kong:"arg,required,type=existingdir,help=${PathHelp}"`
 }
 
 func (c *cliRoot) Run(kctx *kong.Context) (err error) {
-	if len(c.Path) == 0 {
-		c.Path = []string{"*.go"}
+	fsys := os.DirFS(c.Path)
+	sources, err := sqlcgetters.ListSQLCFiles(fsys, ".")
+	if err != nil {
+		return err
+	}
+	if len(sources) == 0 {
+		return fmt.Errorf("no sqlc output found in %s", c.Path)
 	}
 
 	var buf bytes.Buffer
-	_, err = sqlcgetters.GenerateGetters(&buf, os.DirFS("."), c.Path...)
+	_, err = sqlcgetters.GenerateGetters(&buf, fsys, sources...)
 	if err != nil {
 		return err
 	}
