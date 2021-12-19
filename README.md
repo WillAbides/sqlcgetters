@@ -26,6 +26,32 @@ Outputs to stdout. Example usage:
 sqlcgetters ./sqlqueries >  ./sqlqueries/getters.go
 ```
 
+If `sqlc` generates:
+
+```go
+type User struct {
+    ID        uuid.UUID 
+	CreatedAt time.Time
+    Name      string 
+}
+```
+
+then `sqlcgetters` will generate:
+
+```go
+func (x User) GetID() uuid.UUID {
+    return x.ID
+}
+
+func (x User) GetCreatedAt() time.Time {
+    return x.CreatedAt
+}
+
+func (x User) GetName() string {
+    return x.Name
+}
+```
+
 ## Why do I need this?
 
 `sqlc` generates structs with exported fields, so why would you want getters? It's all about interfaces. Take these 
