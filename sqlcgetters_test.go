@@ -3,6 +3,7 @@ package sqlcgetters
 import (
 	"bytes"
 	"flag"
+	"fmt"
 	"io/fs"
 	"os"
 	"path"
@@ -15,6 +16,13 @@ import (
 )
 
 //go:generate go test . -write-golden
+
+func TestFoo(t *testing.T) {
+	stat, err := os.Stat("testdata")
+	require.NoError(t, err)
+
+	fmt.Println(stat.Mode().Perm() &^ 0o111)
+}
 
 var writeGolden bool
 
