@@ -68,6 +68,13 @@ You have two different structs with the same fields. Writing a function that han
 You need to accept `interface{}` and the type switch to handle the different structs. But if you had a Get*() 
 function for each field, your function can accept an interface with the fields you need.
 
+## Name conflicts
+
+If you have columns named both `foo` and `get_foo`, then sqlc will create fields named `Foo` and `GetFoo`. Normally 
+`sqlcgetters` will generate a getter for `Foo` named `GetFoo()`, but that won't work because the name `GetFoo` is 
+already in use. In this case, `sqlcgetters` will append a `_` to the end of the method name and create `GetFoo_()` 
+instead. This shouldn't happen in any sane schema, but it's possible.
+
 ## Install
 
 ### go get
